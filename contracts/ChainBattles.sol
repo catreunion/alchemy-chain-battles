@@ -3,14 +3,13 @@ pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/Strings.sol"; // implement the toString() function
+import "@openzeppelin/contracts/utils/Strings.sol"; // for the toString() method which coverts uint to string
 import "@openzeppelin/contracts/utils/Base64.sol"; // handle base64 data 
 
 contract ChainBattles is ERC721URIStorage {
   using Counters for Counters.Counter;
   Counters.Counter private totalToken;
-  // associate all the methods in the "Strings" library to the uint256 type
-  using Strings for uint256;
+  using Strings for uint256; // for the toString() method which coverts uint to string
   mapping(uint256 => uint256) private tokenIDtoLv; // store the levels of all NFTs
 
   constructor() ERC721("Chain Battles", "CBTLS") {}
@@ -24,6 +23,7 @@ contract ChainBattles is ERC721URIStorage {
     _setTokenURI(newItemID, getTokenURI(newItemID));
   }
 
+  // create a JSON object
   function getTokenURI(uint256 _tokenID) public view returns (string memory) {
     bytes memory dataURI = abi.encodePacked(
       '{',
@@ -36,6 +36,7 @@ contract ChainBattles is ERC721URIStorage {
     return string( abi.encodePacked( "data:application/json;base64,", Base64.encode(dataURI) ) );
   }
 
+  // create a SVG image
   function generateCharacter(uint256 _tokenID) public view returns (string memory) {
     bytes memory svg = abi.encodePacked(
       '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 350 350">',
@@ -57,8 +58,8 @@ contract ChainBattles is ERC721URIStorage {
   function train(uint256 _tokenID) public {
     require(_exists(_tokenID), "the NFT you entered doesn't exist");
     require(ownerOf(_tokenID) == msg.sender, "you are NOT the owner of this NFT");
-    uint256 currentLevel = tokenIDtoLv[_tokenID];
-    tokenIDtoLv[_tokenID] = currentLevel + 1;
+    uint256 currentLv = tokenIDtoLv[_tokenID];
+    tokenIDtoLv[_tokenID] = currentLv + 1;
     _setTokenURI(_tokenID, getTokenURI(_tokenID));
   }
 }
