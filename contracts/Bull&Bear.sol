@@ -36,8 +36,6 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
 "https://ipfs.io/ipfs/QmTVLyTSuiKGUEmb88BgXG3qNC8YgpHZiFbjHrXKH3QHEu?filename=coolio_bear.json",
 "https://ipfs.io/ipfs/QmbKhBXVWmwrYsTPFYfroR2N7NAekAMxHUVg2CWks7i9qj?filename=simple_bear.json" ];
 
-  event TokensUpdated(string marketTrend);
-
   // a MockPriceFeed.sol contract address : 0xD753A1c190091368EaC67bbF3Ee5bAEd265aC420
   // price feed contract address of BTC/USD on Rinkeby
   // https://rinkeby.etherscan.io/address/0xECe365B379E1dD183B20fc5f022230C044d51404
@@ -47,6 +45,8 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
     priceFeed = AggregatorV3Interface(_priceFeed);
     currentPrice = getLatestPrice();
   }
+
+  event TokensUpdated(string marketTrend);
 
   function safeMint(address _to) public  {
     uint tokenId = _tokenIdCounter.current();
@@ -116,6 +116,10 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
     emit TokensUpdated(trend);
   }
 
+  function compareStrings(string memory _a, string memory _b) internal pure returns (bool) {
+    return ( keccak256(abi.encodePacked(_a)) == keccak256(abi.encodePacked(_b)) );
+  }
+
   function setPriceFeed(address _newFeed) public onlyOwner {
     priceFeed = AggregatorV3Interface(_newFeed);
   }
@@ -123,12 +127,6 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
   function setInterval(uint256 _newInterval) public onlyOwner {
     interval = _newInterval;
   }
-    
-
-  function compareStrings(string memory a, string memory b) internal pure returns (bool) {
-    return ( keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b)) );
-  }
-
 
   function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal override(ERC721, ERC721Enumerable) {
     super._beforeTokenTransfer(_from, _to, _tokenId);
@@ -138,8 +136,8 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
     super._burn(_tokenId);
   }
 
-  function tokenURI(uint256 _tokenId) public view override(ERC721, ERC721URIStorage)
-returns (string memory) {
+  // for OpenSea to show the metadata
+  function tokenURI(uint256 _tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
     return super.tokenURI(_tokenId);
   }
 
