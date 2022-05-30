@@ -3,58 +3,62 @@ pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/Strings.sol"; // for the toString() method which coverts uint to string
-import "@openzeppelin/contracts/utils/Base64.sol"; // handle base64 data 
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Base64.sol";
 
-contract ChainBattles is ERC721URIStorage {
+contract AlchemyRahat is ERC721URIStorage {
   using Counters for Counters.Counter;
-  Counters.Counter private totalToken;
-  using Strings for uint256; // for the toString() method which coverts uint to string
-  mapping(uint256 => uint256) private tokenIDtoLv; // store the levels of all NFTs
+  Counters.Counter private tokenIdCounter;
+  // associate all the methods inside the "Strings" library to the uint256 type
+  using Strings for uint256;
+  mapping(uint256 => uint256) private tokenIDtoLv;
+  uint256 MAX_SUPPLY = 100;
 
-  constructor() ERC721("Chain Battles", "CBTLS") {}
+  constructor() ERC721("AlchemyRahat", "ALCHRH") {}
 
   function mint() public {
-    totalToken.increment();
-    uint256 newItemID = totalToken.current();
-    _safeMint(msg.sender, newItemID);
+    tokenIdCounter.increment();
+    // ID of the 1st NFT = 1
+    uint256 tokenId = tokenIdCounter.current();
 
-    tokenIDtoLv[newItemID] = 0;
-    _setTokenURI(newItemID, getTokenURI(newItemID));
+    require(tokenId <= MAX_SUPPLY, "sorry all NFTs have been minted");
+    _safeMint(msg.sender, tokenId);
+    tokenIDtoLv[tokenId] = 0;
+    _setTokenURI(tokenId, getTokenURI(tokenId));
   }
 
-  // create a JSON object
   function getTokenURI(uint256 _tokenID) public view returns (string memory) {
     bytes memory dataURI = abi.encodePacked(
       '{',
-        '"name":"Chain Battles #', _tokenID.toString(), '",',
-        '"description":"Battles on chain",',
-        '"image":"', generateCharacter(_tokenID), '"',
+        '"name":"AlchemyRahat #', _tokenID.toString(), '",',
+        '"description":"a battle of storing metadata on blockchain",',
+        '"image":"', generateSVG(_tokenID), '"',
       '}'
     );
 
     return string( abi.encodePacked( "data:application/json;base64,", Base64.encode(dataURI) ) );
   }
 
-  // create a SVG image
-  function generateCharacter(uint256 _tokenID) public view returns (string memory) {
+  function generateSVG(uint256 _tokenID) public view returns (string memory) {
     bytes memory svg = abi.encodePacked(
       '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 350 350">',
       '<style>.base { fill: white; font-family: serif; font-size: 14px; }</style>',
       '<rect width="100%" height="100%" fill="black" />',
       '<text x="50%" y="40%" class="base" dominant-baseline="middle" text-anchor="middle">', "Warrior", '</text>',
-      '<text x="50%" y="50%" class="base" dominant-baseline="middle" text-anchor="middle">', "Levels: ", getLevels(_tokenID), '</text>',
+      '<text x="50%" y="50%" class="base" dominant-baseline="middle" text-anchor="middle">', "Level: ", getLv(_tokenID), '</text>',
       '</svg>'
     );
 
     return string( abi.encodePacked( "data:image/svg+xml;base64,", Base64.encode(svg) ) );
   }
 
-  function getLevels(uint256 _tokenID) public view returns (string memory) {
-    uint256 levels = tokenIDtoLv[_tokenID];
-    return levels.toString();
+  function getLv(uint256 _tokenID) public view returns (string memory) {
+    uint256 lv = tokenIDtoLv[_tokenID];
+    return lv.toString();
   }
 
+  // train an NFT and raise its level by 1
+  // update TokenURI to reflect the training
   function train(uint256 _tokenID) public {
     require(_exists(_tokenID), "the NFT you entered doesn't exist");
     require(ownerOf(_tokenID) == msg.sender, "you are NOT the owner of this NFT");
