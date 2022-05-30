@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
@@ -16,12 +16,13 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, KeeperCompatibleInterface  {
   using Counters for Counters.Counter;
   Counters.Counter private _tokenIdCounter;
-  AggregatorV3Interface public pricefeed;
+  uint256 MAX_SUPPLY = 100;
+  AggregatorV3Interface public priceFeed;
+  int public currentPrice;
 
   // interval in seconds and a timestamp to slow execution of Upkeep
   uint public /* immutable */ interval; 
   uint public lastTimeStamp;
-  int public currentPrice;
     
   // IPFS URIs for the dynamic nft graphics/metadata.
   // You should upload the contents of the /ipfs folder to your own node for development.
@@ -40,16 +41,17 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
   // a MockPriceFeed.sol contract address : 0xD753A1c190091368EaC67bbF3Ee5bAEd265aC420
   // price feed contract address of BTC/USD on Rinkeby
   // https://rinkeby.etherscan.io/address/0xECe365B379E1dD183B20fc5f022230C044d51404
-  constructor(uint updateInterval, address _pricefeed) ERC721("Bull&Bear", "BBTK") {
-    interval = updateInterval; // keeper update interval
+  constructor(uint _updateInterval, address _priceFeed) ERC721("Bull&Bear", "BBTK") {
+    interval = _updateInterval; // keeper update interval
     lastTimeStamp = block.timestamp;
-    pricefeed = AggregatorV3Interface(_pricefeed);
+    priceFeed = AggregatorV3Interface(_priceFeed);
     currentPrice = getLatestPrice();
   }
 
-  function safeMint(address to) public  {
-    uint256 tokenId = _tokenIdCounter.current();
-    _safeMint(to, tokenId);
+  function safeMint(address _to) public  {
+    uint tokenId = _tokenIdCounter.current();
+    require(tokenId <= MAX_SUPPLY, "sorry all NFTs have been minted");
+    _safeMint(_to, tokenId);
     string memory defaultUri = bullUrisIpfs[0];
     _setTokenURI(tokenId, defaultUri);
     console.log("minted token: ", tokenId);
@@ -57,7 +59,7 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
     _tokenIdCounter.increment();
   }
 
-  function checkUpkeep(bytes calldata /* checkData */) external view override returns (bool upkeepNeeded, bytes memory /*performData */) {
+  function checkUpkeep(bytes calldata /* checkData */ ) external view override returns (bool upkeepNeeded, bytes memory /*performData */ ) {
     upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
   }
 
@@ -79,21 +81,21 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
         updateAllTokenUris("bull");
       }
 
-      currentPrice = latestPrice; // update currentPrice
+      currentPrice = latestPrice;
     } else {
       console.log("INTERVAL NOT UP!");
       return;
     }
   }
 
-  function getLatestPrice() public view returns (int256) {
+  function getLatestPrice() public view returns (int) {
     (
       /*uint80 roundID*/,
       int price,
       /*uint startedAt*/,
       /*uint timeStamp*/,
       /*uint80 answeredInRound*/
-    ) = pricefeed.latestRoundData();
+    ) = priceFeed.latestRoundData();
 
     return price; // example price returned 3034715771688
   }
@@ -101,48 +103,47 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
   function updateAllTokenUris(string memory trend) internal {
     if (compareStrings("bear", trend)) {
       console.log(" UPDATING TOKEN URIS WITH ", "bear", trend);
-      for (uint i = 0; i < _tokenIdCounter.current() ; i++) {
+      for (uint i = 0; i < _tokenIdCounter.current(); i++) {
         _setTokenURI(i, bearUrisIpfs[0]);
       } 
         
     } else {     
       console.log(" UPDATING TOKEN URIS WITH ", "bull", trend);
-
-      for (uint i = 0; i < _tokenIdCounter.current() ; i++) {
+      for (uint i = 0; i < _tokenIdCounter.current(); i++) {
         _setTokenURI(i, bullUrisIpfs[0]);
       }  
     }   
     emit TokensUpdated(trend);
   }
 
-  function setPriceFeed(address newFeed) public onlyOwner {
-    pricefeed = AggregatorV3Interface(newFeed);
+  function setPriceFeed(address _newFeed) public onlyOwner {
+    priceFeed = AggregatorV3Interface(_newFeed);
   }
   
-  function setInterval(uint256 newInterval) public onlyOwner {
-    interval = newInterval;
+  function setInterval(uint256 _newInterval) public onlyOwner {
+    interval = _newInterval;
   }
     
 
   function compareStrings(string memory a, string memory b) internal pure returns (bool) {
-    return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
+    return ( keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b)) );
   }
 
 
-  function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal override(ERC721, ERC721Enumerable) {
-    super._beforeTokenTransfer(from, to, tokenId);
+  function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal override(ERC721, ERC721Enumerable) {
+    super._beforeTokenTransfer(_from, _to, _tokenId);
   }
 
-  function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-    super._burn(tokenId);
+  function _burn(uint256 _tokenId) internal override(ERC721, ERC721URIStorage) {
+    super._burn(_tokenId);
   }
 
-  function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage)
+  function tokenURI(uint256 _tokenId) public view override(ERC721, ERC721URIStorage)
 returns (string memory) {
-    return super.tokenURI(tokenId);
+    return super.tokenURI(_tokenId);
   }
 
-  function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721Enumerable) returns (bool) {
-    return super.supportsInterface(interfaceId);
+  function supportsInterface(bytes4 _interfaceId) public view override(ERC721, ERC721Enumerable) returns (bool) {
+    return super.supportsInterface(_interfaceId);
   }
 }
