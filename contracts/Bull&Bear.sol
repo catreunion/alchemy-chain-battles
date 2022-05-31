@@ -19,43 +19,39 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
   uint256 MAX_SUPPLY = 100;
   AggregatorV3Interface public priceFeed;
   int public currentPrice;
-
-  // interval in seconds and a timestamp to slow execution of Upkeep
   uint public /* immutable */ interval; 
   uint public lastTimeStamp;
     
-  // IPFS URIs for the dynamic nft graphics/metadata.
-  // You should upload the contents of the /ipfs folder to your own node for development.
-  string[] bullUrisIpfs = [
+  string[] bullURIsIPFS = [
 "https://ipfs.io/ipfs/QmRXyfi3oNZCubDxiVFre3kLZ8XeGt6pQsnAQRZ7akhSNs?filename=gamer_bull.json",
 "https://ipfs.io/ipfs/QmRJVFeMrtYS2CUVUM2cHJpBV5aX2xurpnsfZxLTTQbiD3?filename=party_bull.json",
 "https://ipfs.io/ipfs/QmdcURmN1kEEtKgnbkVJJ8hrmsSWHpZvLkRgsKKoiWvW9g?filename=simple_bull.json" ];
 
-  string[] bearUrisIpfs = [
+  string[] bearURIsIPFS = [
 "https://ipfs.io/ipfs/Qmdx9Hx7FCDZGExyjLR6vYcnutUR8KhBZBnZfAPHiUommN?filename=beanie_bear.json",
 "https://ipfs.io/ipfs/QmTVLyTSuiKGUEmb88BgXG3qNC8YgpHZiFbjHrXKH3QHEu?filename=coolio_bear.json",
 "https://ipfs.io/ipfs/QmbKhBXVWmwrYsTPFYfroR2N7NAekAMxHUVg2CWks7i9qj?filename=simple_bear.json" ];
 
-  // a MockPriceFeed.sol contract address : 0xD753A1c190091368EaC67bbF3Ee5bAEd265aC420
-  // price feed contract address of BTC/USD on Rinkeby
-  // https://rinkeby.etherscan.io/address/0xECe365B379E1dD183B20fc5f022230C044d51404
-  constructor(uint _updateInterval, address _priceFeed) ERC721("Bull&Bear", "BBTK") {
-    interval = _updateInterval; // keeper update interval
+  // initialize an interface object named priceFeed that use AggregatorV3Interface and connects specifically to a proxy aggregator contract deployed on Rinkeby testnet (in this demo)
+  // the aggregator is a proxy for the BTC/USD data feed
+  // 0xECe365B379E1dD183B20fc5f022230C044d51404
+  constructor(uint _updateInterval, address _priceFeedAddr) ERC721("Bull&Bear", "BBTK") {
+    interval = _updateInterval;
     lastTimeStamp = block.timestamp;
-    priceFeed = AggregatorV3Interface(_priceFeed);
+    priceFeed = AggregatorV3Interface(_priceFeedAddr);
     currentPrice = getLatestPrice();
   }
 
-  event TokensUpdated(string marketTrend);
+  event TokensUpdated(string _marketTrend);
 
-  function safeMint(address _to) public  {
-    uint tokenId = _tokenIdCounter.current();
-    require(tokenId <= MAX_SUPPLY, "sorry all NFTs have been minted");
-    _safeMint(_to, tokenId);
-    string memory defaultUri = bullUrisIpfs[0];
-    _setTokenURI(tokenId, defaultUri);
-    console.log("minted token: ", tokenId);
-    console.log("token url: ", defaultUri);
+  function safeMint(address _to) public {
+    uint tokenID = _tokenIdCounter.current();
+    require(tokenID <= MAX_SUPPLY, "sorry all NFTs have been minted");
+    _safeMint(_to, tokenID);
+    string memory defaultURI = bullURIsIPFS[0];
+    _setTokenURI(tokenID, defaultURI);
+    console.log("tokenID of minted NFT: ", tokenID);
+    console.log("tokenUrl: ", defaultURI);
     _tokenIdCounter.increment();
   }
 
@@ -69,48 +65,44 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
       int latestPrice =  getLatestPrice(); 
     
       if (latestPrice == currentPrice) {
-        console.log("NO CHANGE -> returning!");
+        console.log("Price remains the same. Skip.");
         return;
       }
 
       if (latestPrice < currentPrice) {
-        console.log("bear time");
-        updateAllTokenUris("bear");
+        console.log("bear");
+        updateAllTokenURIs("bear");
       } else {
-        console.log("bull time");
-        updateAllTokenUris("bull");
+        console.log("bull");
+        updateAllTokenURIs("bull");
       }
 
       currentPrice = latestPrice;
     } else {
-      console.log("INTERVAL NOT UP!");
       return;
     }
   }
 
   function getLatestPrice() public view returns (int) {
     (
-      /*uint80 roundID*/,
+      /* uint80 roundID */,
       int price,
-      /*uint startedAt*/,
-      /*uint timeStamp*/,
-      /*uint80 answeredInRound*/
+      /* uint startedAt */,
+      /* uint timeStamp */,
+      /* uint80 answeredInRound */
     ) = priceFeed.latestRoundData();
-
-    return price; // example price returned 3034715771688
+    return price;
   }
   
-  function updateAllTokenUris(string memory trend) internal {
+  function updateAllTokenURIs(string memory trend) internal {
     if (compareStrings("bear", trend)) {
-      console.log(" UPDATING TOKEN URIS WITH ", "bear", trend);
       for (uint i = 0; i < _tokenIdCounter.current(); i++) {
-        _setTokenURI(i, bearUrisIpfs[0]);
+        _setTokenURI(i, bearURIsIPFS[0]);
       } 
         
     } else {     
-      console.log(" UPDATING TOKEN URIS WITH ", "bull", trend);
       for (uint i = 0; i < _tokenIdCounter.current(); i++) {
-        _setTokenURI(i, bullUrisIpfs[0]);
+        _setTokenURI(i, bullURIsIPFS[0]);
       }  
     }   
     emit TokensUpdated(trend);
@@ -120,8 +112,8 @@ contract BullBear is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Keeper
     return ( keccak256(abi.encodePacked(_a)) == keccak256(abi.encodePacked(_b)) );
   }
 
-  function setPriceFeed(address _newFeed) public onlyOwner {
-    priceFeed = AggregatorV3Interface(_newFeed);
+  function setPriceFeed(address _newFeedAddr) public onlyOwner {
+    priceFeed = AggregatorV3Interface(_newFeedAddr);
   }
   
   function setInterval(uint256 _newInterval) public onlyOwner {
